@@ -4,11 +4,11 @@ namespace App\Services;
 use App\DTOs\QRCodeDTO;
 use App\DTOs\QRCodePreviewDTO;
 use App\Models\QRCode;
-use App\Repositories\Contracts\QRCodeRepositoryInterface;
+use App\Repositories\Contracts\QRCodeRepoInterface;
 use App\Services\Contracts\QRCodeServiceInterface;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Storage;
-use Illuminated\Support\Str;
+use Illuminate\Support\Str;
 use SimpleSoftwareIO\QrCode\Facades\QrCode as QrCodeGenerator;
 
 
@@ -39,7 +39,7 @@ public function generatePreview(QRCodePreviewDTO $dto): string
 public function store(QRCodeDTO $dto): Qrcode
 {
     $png = $this->buildQRCode(
-        $dto = content,
+        $dto->content,
         $dto->size,
         $dto->foregroundColor,
         $dto->backgroundColor
@@ -47,7 +47,47 @@ public function store(QRCodeDTO $dto): Qrcode
 
     $filename = Str::slug($dto->title) . '-' . time() . '.png';
     $path = 'qrcodes/' .$filename;
+    Storage::disk('public')->put($path, $png);
+    return $this->qrCodeRepository->create($dto, $path);
 
+}
+
+public function getHistory(int $perPage, ?string $search): LengthAwarePaginator
+{
+    return $this->qrCodeRepository->paginate($perPage, $search);
+
+}
+public function download(QrCode $qrCode): string
+{
+    $this->qrCodeRepository->incrementDownload($qrCode);
+    return storage_path('app/public/' . $qrCode->qr_path);
+}
+public function delete(QrCode $qrCode): void
+{
+    Storage::disk('public')->delete($qrCode->qr_path);
+    $this->qrCodeRepository->delete($qrCode);
+}
+private function buildQRCode(
+    string $content,
+    int $size,
+    string $fg,
+    string $bg
+): string {
+    $fg = ltrim($fg, '#');
+    $bg = ltrim($bg, '#');
+    return QrCodeGenerator::format('png')
+    ->size($size)
+    ->color(
+        hexdec(substr($fg, 0, 2)),
+        hexdec(substr($fg, 2, 2)),
+        hexdec(substr($fg, 4, 2))
+    )
+    ->backgroundColor(
+        hexdec(substr($bg, 0, 2)),
+        hexdec(substr($bg, 2, 2)),
+        hexdec(substr($bg, 4, 2))
+    )
+    ->generate($content);
 }
 }
    
