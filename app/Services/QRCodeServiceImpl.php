@@ -15,7 +15,7 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode as QrCodeGenerator;
 class QRCodeServiceImpl implements QRCodeServiceInterface
 {
     public function __construct(
-        private readonly QRCodeRepositoryInterface $qrCodeRepository
+        private readonly QRCodeRepoInterface $qrCodeRepository
         ){}
 
         public function getDashboardStats(): array
